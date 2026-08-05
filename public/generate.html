@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — WiFi Voucher</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="logo">WiFi Voucher</div>
+  <div class="links">
+    <a href="/index.html">Plans</a>
+    <a href="/redeem.html">Redeem</a>
+    <a href="/generate.html" class="active">Admin</a>
+  </div>
+</nav>
+
+<div class="container section" id="loginSection" style="max-width:420px">
+  <h2>Admin login</h2>
+  <div class="form-group">
+    <label for="username">Username</label>
+    <input id="username" value="admin">
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input id="password" type="password" value="admin123">
+  </div>
+  <button class="btn btn-primary" onclick="login()">Log in</button>
+  <div id="loginMsg"></div>
+</div>
+
+<div class="container section" id="dashboard" style="display:none">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>Admin dashboard</h2>
+    <button class="btn btn-secondary" onclick="logout()">Log out</button>
+  </div>
+
+  <h3>Plans</h3>
+  <table id="plansTable">
+    <thead><tr><th>Name</th><th>Price</th><th>Duration (h)</th><th>Speed</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3 style="margin-top:32px">Vouchers</h3>
+  <table id="vouchersTable">
+    <thead><tr><th>Code</th><th>Plan</th><th>Status</th><th>Created</th><th>Expires</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3 style="margin-top:32px">Transactions</h3>
+  <table id="txTable">
+    <thead><tr><th>Voucher</th><th>Amount</th><th>Method</th><th>Paid at</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3 style="margin-top:32px">Mobile money payments (ClickPesa)</h3>
+  <table id="paymentsTable">
+    <thead><tr><th>Order ref</th><th>Plan</th><th>Phone</th><th>Amount</th><th>Status</th><th>Started</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div style="margin-top:32px">
+    <button class="btn btn-secondary" onclick="resetDemoData()">Reset demo data</button>
+  </div>
+</div>
+
+<div class="footer">WiFi Voucher — admin panel</div>
+
+<script src="/js/api.js"></script>
+<script>
+function isLoggedIn() { return !!localStorage.getItem('wv_admin_token'); }
+
+async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const msg = document.getElementById('loginMsg');
+  msg.innerHTML = '';
+  try {
+    const { token } = await apiPost('/api/auth/login', { username, password });
+    localStorage.setItem('wv_admin_token', token);
+    showDashboard();
+  } catch (err) {
+    msg.innerHTML = `<div class="msg msg-error">${err.message}</div>`;
+  }
+}
+
+function logout() {
+  localStorage.removeItem('wv_admin_token');
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('loginSection').style.display = 'block';
+}
+
+async function showDashboard() {
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  await Promise.all([loadPlansTable(), loadVouchersTable(), loadTransactionsTable(), loadPaymentsTable()]);
+}
+
+async function loadPlansTable() {
+  const plans = await apiGet('/api/plans');
+  document.querySelector('#plansTable tbody').innerHTML = plans.map(p => `
+    <tr><td>${p.name}</td><td>${formatMoney(p.price)}</td><td>${p.durationHours}</td><td>${p.speedMbps} Mbps</td></tr>
+  `).join('');
+  window.__plansById = Object.fromEntries(plans.map(p => [p.id, p]));
+}
+
+async function loadVouchersTable() {
+  const vouchers = await apiGet('/api/admin/vouchers', true);
+  document.querySelector('#vouchersTable tbody').innerHTML = vouchers.slice().reverse().map(v => {
+    const plan = window.__plansById?.[v.planId];
+    return `<tr>
+      <td>${v.code}</td>
+      <td>${plan ? plan.name : '—'}</td>
+      <td><span class="status-pill status-${v.status}">${v.status}</span></td>
+      <td>${formatDate(v.createdAt)}</td>
+      <td>${formatDate(v.expiresAt)}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="5" style="color:var(--text-muted)">No vouchers yet.</td></tr>`;
+}
+
+async function loadTransactionsTable() {
+  const txns = await apiGet('/api/admin/transactions', true);
+  document.querySelector('#txTable tbody').innerHTML = txns.slice().reverse().map(t => `
+    <tr><td>${t.voucherCode}</td><td>${formatMoney(t.amount)}</td><td>${t.method || 'demo'}</td><td>${formatDate(t.paidAt)}</td></tr>
+  `).join('') || `<tr><td colspan="4" style="color:var(--text-muted)">No transactions yet.</td></tr>`;
+}
+
+function paymentStatusClass(status) {
+  if (status === 'completed') return 'status-active';
+  if (status === 'FAILED') return 'status-expired';
+  return 'status-unused';
+}
+
+async function loadPaymentsTable() {
+  const payments = await apiGet('/api/admin/payments', true);
+  document.querySelector('#paymentsTable tbody').innerHTML = payments.slice().reverse().map(p => {
+    const plan = window.__plansById?.[p.planId];
+    return `<tr>
+      <td>${p.orderReference}</td>
+      <td>${plan ? plan.name : '—'}</td>
+      <td>${p.phoneNumber}</td>
+      <td>${formatMoney(p.amount)}</td>
+      <td><span class="status-pill ${paymentStatusClass(p.status)}">${p.status}</span></td>
+      <td>${formatDate(p.createdAt)}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="6" style="color:var(--text-muted)">No mobile money payments yet.</td></tr>`;
+}
+
+async function resetDemoData() {
+  if (!confirm('Reset all plans, vouchers, and transactions to demo defaults?')) return;
+  await apiPost('/api/admin/reset-demo-data', {}, true);
+  await showDashboard();
+}
+
+if (isLoggedIn()) showDashboard();
+</script>
+</body>
+</html>

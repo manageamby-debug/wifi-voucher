@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redeem voucher — WiFi Voucher</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="logo">WiFi Voucher</div>
+  <div class="links">
+    <a href="/index.html">Plans</a>
+    <a href="/redeem.html" class="active">Redeem</a>
+    <a href="/generate.html">Admin</a>
+  </div>
+</nav>
+
+<div class="container section" style="max-width:520px">
+  <h2>Check or redeem a voucher</h2>
+
+  <div class="form-group">
+    <label for="codeInput">Voucher code</label>
+    <input id="codeInput" placeholder="XXXX-XXXX-XXXX" autocomplete="off">
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn btn-secondary" onclick="checkVoucher()">Check status</button>
+    <button class="btn btn-primary" onclick="redeemVoucher()">Activate / redeem</button>
+  </div>
+
+  <div id="msg"></div>
+
+  <div id="voucherResult" style="display:none" class="voucher-box">
+    <div class="status-pill" id="statusPill"></div>
+    <div class="voucher-code" id="voucherCode"></div>
+    <p id="voucherPlan" style="color:var(--text-muted); margin:4px 0"></p>
+    <p id="voucherExpiry" style="color:var(--text-muted); font-size:13px"></p>
+  </div>
+</div>
+
+<div class="footer">WiFi Voucher — demo project</div>
+
+<script src="/js/api.js"></script>
+<script>
+function currentCode() {
+  return document.getElementById('codeInput').value.trim().toUpperCase();
+}
+
+function renderVoucher(voucher, plan) {
+  document.getElementById('voucherResult').style.display = 'block';
+  document.getElementById('voucherCode').textContent = voucher.code;
+  document.getElementById('voucherPlan').textContent = plan ? `${plan.name} — ${plan.durationHours}h at ${plan.speedMbps} Mbps` : '';
+  document.getElementById('voucherExpiry').textContent =
+    voucher.status === 'active' ? `Expires: ${formatDate(voucher.expiresAt)}` :
+    voucher.status === 'expired' ? `Expired: ${formatDate(voucher.expiresAt)}` :
+    'Not yet activated';
+  const pill = document.getElementById('statusPill');
+  pill.textContent = voucher.status;
+  pill.className = `status-pill status-${voucher.status}`;
+}
+
+async function checkVoucher() {
+  const msg = document.getElementById('msg');
+  msg.innerHTML = '';
+  const code = currentCode();
+  if (!code) { msg.innerHTML = `<div class="msg msg-error">Enter a voucher code first.</div>`; return; }
+  try {
+    const { voucher, plan } = await apiGet(`/api/vouchers/${encodeURIComponent(code)}`);
+    renderVoucher(voucher, plan);
+  } catch (err) {
+    document.getElementById('voucherResult').style.display = 'none';
+    msg.innerHTML = `<div class="msg msg-error">${err.message}</div>`;
+  }
+}
+
+async function redeemVoucher() {
+  const msg = document.getElementById('msg');
+  msg.innerHTML = '';
+  const code = currentCode();
+  if (!code) { msg.innerHTML = `<div class="msg msg-error">Enter a voucher code first.</div>`; return; }
+  try {
+    const { voucher, plan } = await apiPost(`/api/vouchers/${encodeURIComponent(code)}/redeem`, {});
+    renderVoucher(voucher, plan);
+    msg.innerHTML = `<div class="msg msg-success">Voucher activated — you're connected!</div>`;
+  } catch (err) {
+    msg.innerHTML = `<div class="msg msg-error">${err.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>

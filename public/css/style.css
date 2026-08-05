@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
+
+:root {
+  --brand: #6144f2;
+  --brand-dark: #4b30d6;
+  --brand-light: #efeafe;
+  --text: #1e1b2e;
+  --text-muted: #6b6780;
+  --bg: #ffffff;
+  --surface: #f5f3ff;
+  --border: #e4e0f7;
+  --success: #22c55e;
+  --success-bg: #e9fbef;
+  --danger: #ef4444;
+  --danger-bg: #fdecec;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Nunito Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+a { color: var(--brand); text-decoration: none; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Nav ─────────────────────────────────────────────────────────────── */
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; border-bottom: 1px solid var(--border);
+}
+.nav .logo { font-weight: 800; font-size: 20px; color: var(--brand); }
+.nav .links { display: flex; gap: 24px; align-items: center; }
+.nav .links a { font-weight: 600; color: var(--text); }
+.nav .links a.active { color: var(--brand); }
+
+/* ── Hero ────────────────────────────────────────────────────────────── */
+.hero { text-align: center; padding: 64px 24px 48px; }
+.hero h1 { font-size: 38px; font-weight: 800; margin: 0 0 12px; }
+.hero p { color: var(--text-muted); font-size: 17px; max-width: 520px; margin: 0 auto 28px; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: inherit; font-weight: 700; font-size: 15px;
+  padding: 12px 22px; border-radius: 999px; border: none; cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-dark); }
+.btn-secondary { background: var(--surface); color: var(--brand); border: 1px solid var(--border); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Cards / grid ────────────────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+.card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; text-align: center;
+}
+.card h3 { margin: 4px 0; font-size: 20px; }
+.card .price { font-size: 26px; font-weight: 800; color: var(--brand); margin: 8px 0; }
+.card .meta { color: var(--text-muted); font-size: 14px; margin-bottom: 18px; }
+.card .card-actions { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Voucher card ────────────────────────────────────────────────────── */
+.voucher-box {
+  background: var(--brand-light); border: 1px dashed var(--brand);
+  border-radius: var(--radius); padding: 28px; text-align: center; margin: 24px 0;
+}
+.voucher-code {
+  font-size: 28px; font-weight: 800; letter-spacing: 2px; color: var(--brand-dark);
+  margin: 12px 0;
+}
+.status-pill {
+  display: inline-block; padding: 4px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+}
+.status-unused  { background: var(--surface); color: var(--brand-dark); }
+.status-active  { background: var(--success-bg); color: #15803d; }
+.status-expired { background: var(--danger-bg); color: #b91c1c; }
+
+/* ── Forms ───────────────────────────────────────────────────────────── */
+.form-group { margin-bottom: 16px; text-align: left; }
+.form-group label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+input, select {
+  width: 100%; font-family: inherit; font-size: 15px;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface);
+}
+input:focus, select:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* ── Table (admin) ──────────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+th { color: var(--text-muted); font-weight: 700; }
+
+/* ── Modal (mobile money payment flow) ──────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(30, 27, 46, 0.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; z-index: 100;
+}
+.modal-box {
+  background: var(--bg); border-radius: var(--radius); padding: 28px;
+  max-width: 380px; width: 100%; text-align: center;
+}
+.modal-box h3 { margin: 0 0 6px; }
+.modal-box .modal-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 18px; }
+.spinner {
+  width: 32px; height: 32px; margin: 0 auto 16px;
+  border: 3px solid var(--border); border-top-color: var(--brand);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Misc ────────────────────────────────────────────────────────────── */
+.section { padding: 40px 0; }
+.section h2 { font-size: 24px; margin-bottom: 20px; }
+.msg { padding: 12px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; margin: 16px 0; }
+.msg-error { background: var(--danger-bg); color: #b91c1c; }
+.msg-success { background: var(--success-bg); color: #15803d; }
+.footer { text-align: center; color: var(--text-muted); font-size: 13px; padding: 32px 0; }

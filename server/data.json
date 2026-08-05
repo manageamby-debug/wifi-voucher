@@ -1,0 +1,79 @@
+{
+  "admins": [
+    {
+      "id": "admin_001",
+      "name": "WiFi Voucher Admin",
+      "username": "admin",
+      "passwordHash": "5b446e26d5f340bcb29fcce851171757e34d0dd29ea6c6e0f7fda9146fe6f09a",
+      "role": "admin",
+      "createdAt": "2026-08-05T19:15:49.179Z"
+    }
+  ],
+  "plans": [
+    {
+      "id": 1,
+      "name": "1 Hour",
+      "price": 500,
+      "durationHours": 1,
+      "speedMbps": 5,
+      "description": "Quick browsing session"
+    },
+    {
+      "id": 2,
+      "name": "1 Day",
+      "price": 1500,
+      "durationHours": 24,
+      "speedMbps": 10,
+      "description": "Full day access"
+    },
+    {
+      "id": 3,
+      "name": "1 Week",
+      "price": 8000,
+      "durationHours": 168,
+      "speedMbps": 10,
+      "description": "A week of unlimited access"
+    },
+    {
+      "id": 4,
+      "name": "1 Month",
+      "price": 25000,
+      "durationHours": 720,
+      "speedMbps": 20,
+      "description": "Best value for regular use"
+    }
+  ],
+  "vouchers": [
+    {
+      "code": "W6RL-D7PM-PMW8",
+      "planId": 1,
+      "status": "active",
+      "createdAt": "2026-08-05T20:47:50.926Z",
+      "activatedAt": "2026-08-05T20:48:03.851Z",
+      "expiresAt": "2026-08-05T21:48:03.851Z"
+    },
+    {
+      "code": "5GAA-NZ94-XYAM",
+      "planId": 2,
+      "status": "unused",
+      "createdAt": "2026-08-05T21:11:07.823Z",
+      "activatedAt": null,
+      "expiresAt": null
+    }
+  ],
+  "transactions": [
+    {
+      "id": "txn_1785962870926_128448",
+      "voucherCode": "W6RL-D7PM-PMW8",
+      "amount": 500,
+      "paidAt": "2026-08-05T20:47:50.926Z"
+    },
+    {
+      "id": "txn_1785964267823_784719",
+      "voucherCode": "5GAA-NZ94-XYAM",
+      "amount": 1500,
+      "paidAt": "2026-08-05T21:11:07.823Z"
+    }
+  ],
+  "payments": []
+}

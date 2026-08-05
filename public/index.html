@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WiFi Voucher</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="logo">WiFi Voucher</div>
+  <div class="links">
+    <a href="/index.html" class="active">Plans</a>
+    <a href="/redeem.html">Redeem</a>
+    <a href="/generate.html">Admin</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Fast, reliable WiFi. Buy a plan, get your voucher instantly.</h1>
+  <p>Pick a plan below, pay with mobile money, and we'll generate a unique voucher code you can activate whenever you're ready to connect.</p>
+</section>
+
+<div class="container section">
+  <h2>Plans</h2>
+  <div id="plansGrid" class="grid">
+    <p style="color:var(--text-muted)">Loading plans...</p>
+  </div>
+  <div id="msg"></div>
+</div>
+
+<!-- Purchase result -->
+<div class="container section" id="resultSection" style="display:none">
+  <h2>Your voucher</h2>
+  <div class="voucher-box">
+    <div class="status-pill status-unused">Unused</div>
+    <div class="voucher-code" id="resultCode"></div>
+    <p id="resultPlan" style="color:var(--text-muted)"></p>
+    <a href="/redeem.html" class="btn btn-primary" id="resultRedeemLink">Redeem this voucher</a>
+  </div>
+</div>
+
+<!-- Mobile money modal -->
+<div class="modal-overlay" id="payOverlay" style="display:none">
+  <div class="modal-box">
+
+    <!-- Step 1: phone number entry -->
+    <div id="payStepPhone">
+      <h3>Pay with mobile money</h3>
+      <p class="modal-sub" id="payPlanSummary"></p>
+      <div class="form-group">
+        <label for="payPhone">Phone number</label>
+        <input id="payPhone" placeholder="0781 000 000" autocomplete="tel" inputmode="tel">
+      </div>
+      <p class="modal-sub" style="margin-top:-8px">M-Pesa, Tigo Pesa/Mixx, Airtel Money or HaloPesa</p>
+      <div id="payFormMsg"></div>
+      <div style="display:flex; gap:10px; margin-top:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closePayModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" id="payConfirmBtn" onclick="submitMobileMoneyPayment()">Send request</button>
+      </div>
+    </div>
+
+    <!-- Step 2: waiting for USSD approval -->
+    <div id="payStepWaiting" style="display:none">
+      <div class="spinner"></div>
+      <h3>Check your phone</h3>
+      <p class="modal-sub">Enter your mobile money PIN on the USSD prompt to approve the payment.</p>
+      <p class="modal-sub" id="payWaitingMsg" style="font-size:13px"></p>
+      <button class="btn btn-secondary" onclick="closePayModal()">Close</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">WiFi Voucher — demo project</div>
+
+<script src="/js/api.js"></script>
+<script>
+let plansById = {};
+let pollTimer = null;
+let pollDeadline = 0;
+
+async function loadPlans() {
+  try {
+    const plans = await apiGet('/api/plans');
+    plansById = Object.fromEntries(plans.map(p => [p.id, p]));
+    const grid = document.getElementById('plansGrid');
+    grid.innerHTML = plans.map(p => `
+      <div class="card">
+        <h3>${p.name}</h3>
+        <div class="price">${formatMoney(p.price)}</div>
+        <div class="meta">${p.speedMbps} Mbps &middot; ${p.description || ''}</div>
+        <div class="card-actions">
+          <button class="btn btn-primary" onclick="openPayModal(${p.id})">Pay with mobile money</button>
+          <button class="btn btn-secondary" onclick="buyPlan(${p.id})">Instant demo voucher</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    document.getElementById('plansGrid').innerHTML =
+      `<p style="color:var(--danger)">Could not load plans. Is the server running?</p>`;
+  }
+}
+
+// ── Instant / demo voucher (no real payment) ─────────────────────────────
+async function buyPlan(planId) {
+  const msg = document.getElementById('msg');
+  msg.innerHTML = '';
+  try {
+    const { voucher, plan } = await apiPost('/api/vouchers', { planId });
+    showVoucherResult(voucher, plan);
+  } catch (err) {
+    msg.innerHTML = `<div class="msg msg-error">${err.message}</div>`;
+  }
+}
+
+// ── Mobile money (ClickPesa USSD push) ───────────────────────────────────
+let payingPlanId = null;
+
+function openPayModal(planId) {
+  payingPlanId = planId;
+  const plan = plansById[planId];
+  document.getElementById('payPlanSummary').textContent = plan ? `${plan.name} — ${formatMoney(plan.price)}` : '';
+  document.getElementById('payPhone').value = '';
+  document.getElementById('payFormMsg').innerHTML = '';
+  document.getElementById('payStepPhone').style.display = 'block';
+  document.getElementById('payStepWaiting').style.display = 'none';
+  document.getElementById('payOverlay').style.display = 'flex';
+}
+
+function closePayModal() {
+  document.getElementById('payOverlay').style.display = 'none';
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+}
+
+async function submitMobileMoneyPayment() {
+  const formMsg = document.getElementById('payFormMsg');
+  formMsg.innerHTML = '';
+  const phone = normalizeTzPhone(document.getElementById('payPhone').value);
+  if (!phone) {
+    formMsg.innerHTML = `<div class="msg msg-error">Enter a valid Tanzanian number, e.g. 0781 000 000</div>`;
+    return;
+  }
+
+  const btn = document.getElementById('payConfirmBtn');
+  btn.disabled = true;
+  try {
+    const { orderReference } = await apiPost('/api/payments/mobile-money', { planId: payingPlanId, phoneNumber: phone });
+    document.getElementById('payStepPhone').style.display = 'none';
+    document.getElementById('payStepWaiting').style.display = 'block';
+    pollDeadline = Date.now() + 2 * 60 * 1000; // give up after 2 minutes
+    pollPaymentStatus(orderReference);
+  } catch (err) {
+    formMsg.innerHTML = `<div class="msg msg-error">${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function pollPaymentStatus(orderReference) {
+  if (Date.now() > pollDeadline) {
+    document.getElementById('payWaitingMsg').textContent = 'This is taking a while — you can close this and check the redeem page shortly, or try again.';
+    return;
+  }
+  try {
+    const { payment, voucher, plan } = await apiGet(`/api/payments/${encodeURIComponent(orderReference)}/status`);
+    if (payment.status === 'completed' && voucher) {
+      closePayModal();
+      showVoucherResult(voucher, plan);
+      return;
+    }
+    if (payment.status === 'FAILED') {
+      document.getElementById('payWaitingMsg').textContent = 'Payment failed or was not approved. Close this and try again.';
+      return;
+    }
+  } catch (err) {
+    // keep polling — a transient error here shouldn't stop the flow
+  }
+  pollTimer = setTimeout(() => pollPaymentStatus(orderReference), 3000);
+}
+
+function showVoucherResult(voucher, plan) {
+  document.getElementById('resultCode').textContent = voucher.code;
+  document.getElementById('resultPlan').textContent = `${plan.name} — ${formatMoney(plan.price)}`;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+loadPlans();
+</script>
+</body>
+</html>
